@@ -1,9 +1,12 @@
 package car.tp2;
 
+import java.io.OutputStream;
+
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.StreamingOutput;
 
 /**
  * Exemple de ressource REST accessible a l'adresse :
@@ -31,6 +34,19 @@ public class HelloWorldResource {
 	 @Path("{var: .*}/stuff")
 	 public String getStuff( @PathParam("var") String stuff ) {
 		 return "Stuff: "+stuff;
+	 }
+	 // Pour tester:
+	 // curl http://localhost:8080/rest/api/helloworld/getfile
+	 @GET
+	 @Path ("/getfile")
+	 @Produces("application/octet-stream")
+	 public StreamingOutput getFile() {
+	   StreamingOutput so = new StreamingOutput() {
+	     public void write(OutputStream os) throws java.io.IOException {
+	       os.write("Coucou!\n".getBytes());
+	     }
+	   };
+	   return so;
 	 }
 }
 

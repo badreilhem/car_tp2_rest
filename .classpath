@@ -96,5 +96,6 @@
 	<classpathentry kind="lib" path="/home/m1/badreddine/Documents/m1s2/car/car_tp2_rest/lib/woodstox-core-asl-4.1.4.jar"/>
 	<classpathentry kind="lib" path="/home/m1/badreddine/Documents/m1s2/car/car_tp2_rest/lib/wsdl4j-1.6.2.jar"/>
 	<classpathentry kind="lib" path="/home/m1/badreddine/Documents/m1s2/car/car_tp2_rest/lib/xmlschema-core-2.0.3.jar"/>
+	<classpathentry kind="lib" path="/home/m1/badreddine/Documents/m1s2/car/car_tp2_rest/lib/commons-net-3.4.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
