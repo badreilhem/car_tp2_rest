@@ -1,9 +1,8 @@
 package car.tp2;
 
-import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 
 import javax.ws.rs.Consumes;
@@ -16,6 +15,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.StreamingOutput;
 
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPFile;
 
 @Path("/restftp")
 public class RestFTP {
@@ -29,23 +29,27 @@ public class RestFTP {
 		StreamingOutput so = null;
 		final FTPClient ftpClient = new FTPClient();
 		try {
-			ftpClient.connect("localhost", 1234);
+			ftpClient.connect("edel-brau.lifl.fr", 21);
 			final boolean login = ftpClient.login("anonymous", "bob");
 
 			if (login) {
 				final InputStream is = ftpClient.retrieveFileStream(file);
 
-				so = new StreamingOutput() {
-					public void write(OutputStream os) throws java.io.IOException {
-						while (is.available() > 0)
-							os.write(is.read());
-						is.close();
-						os.close();
-						ftpClient.logout();
-					}
-				};
+				if (is != null) {
+					so = new StreamingOutput() {
+						public void write(OutputStream os)
+								throws java.io.IOException {
+							while (is.available() > 0)
+								os.write(is.read());
+							is.close();
+							ftpClient.logout();
+							os.close();
 
+						}
+					};
+				}
 			}
+
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -54,21 +58,20 @@ public class RestFTP {
 	}
 
 	// Pour tester:
-	// curl -H "Content-Type: application/octet-stream" -X POST -d "tralala"
-	// http://localhost:8080/rest/api/helloworld/postfile
+	// curl -H "Content-Type: application/octet-stream" -X POST -d "tralala" http://localhost:8080/rest/api/helloworld/postfile
 	@POST
 	@Path("/postfile/{var: .*}")
 	@Consumes("application/octet-stream")
-	public String postFile(InputStream is, @PathParam("var") String file) throws java.io.IOException {		
+	public String postFile(InputStream is, @PathParam("var") String file)
+			throws java.io.IOException {
 		final FTPClient ftpClient = new FTPClient();
 		try {
-			ftpClient.connect("localhost", 1234);
+			ftpClient.connect("edel-brau.lifl.fr", 21);
 			final boolean login = ftpClient.login("anonymous", "bob");
 
 			if (login) {
-
-				OutputStream os = ftpClient.storeFileStream(file);
-				os.write(is.read());
+				if(ftpClient.storeFile(file, is))
+					return ("Envoi fichier OK (POST)\n");
 				
 				ftpClient.logout();
 			}
@@ -76,30 +79,30 @@ public class RestFTP {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return ("Envoi fichier OK (POST)\n");
+		return ("Envoi fichier KO (POST)\n");
 	}
 
-	// Pour tester:
-	// curl -H "Content-Type: application/octet-stream" -X PUT -d "tralala"
-	// http://localhost:8080/rest/api/helloworld/putfile
-	@PUT
-	@Path("/putfile/{var: .*}")
+	@GET
+	@Path("/listfiles/{var: .*}")
 	@Consumes("application/octet-stream")
-	public String putFile(InputStream is, @PathParam("var") String file) throws java.io.IOException {	
+	public String listFile(OutputStream os, @PathParam("var") String file)
+			throws java.io.IOException {
 		final FTPClient ftpClient = new FTPClient();
 		try {
-			ftpClient.connect("localhost", 1234);
+			ftpClient.connect("edel-brau.lifl.fr", 21);
 			final boolean login = ftpClient.login("anonymous", "bob");
 
 			if (login) {
-
-				ftpClient.storeFile(file, is);
+				FTPFile files[] = ftpClient.listFiles();
+				for(FTPFile f : files){
+					os.write(f.getName().getBytes());					
+				}
 				ftpClient.logout();
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return ("Envoi fichier OK (PUT)\n");
+		return ("Envoi fichier KO (POST)\n");
 	}
 }
