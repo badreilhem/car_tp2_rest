@@ -84,8 +84,8 @@ public class RestFTP {
 
 	@GET
 	@Path("/listfiles/{var: .*}")
-	@Consumes("application/octet-stream")
-	public String listFile(OutputStream os, @PathParam("var") String file)
+	@Produces("text/html")
+	public String listFile(@PathParam("var") String file)
 			throws java.io.IOException {
 		final FTPClient ftpClient = new FTPClient();
 		try {
@@ -93,16 +93,53 @@ public class RestFTP {
 			final boolean login = ftpClient.login("anonymous", "bob");
 
 			if (login) {
-				FTPFile files[] = ftpClient.listFiles();
-				for(FTPFile f : files){
-					os.write(f.getName().getBytes());					
+				if(file.equals("home")){
+					FTPFile files[] = ftpClient.listFiles();
+					String nameFiles = "";
+					for(FTPFile f : files){
+						nameFiles += f.getName() + "</br>";
+					}
+					ftpClient.logout();
+					return nameFiles;
+				}else if (ftpClient.changeWorkingDirectory(file)){
+					FTPFile files[] = ftpClient.listFiles();
+					String nameFiles = "";
+					for(FTPFile f : files){
+						nameFiles += f.getName() + "</br>";
+					}
+					ftpClient.logout();
+					return nameFiles;
+				}else{
+					return ("Incorrect path </br>");
 				}
-				ftpClient.logout();
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return ("Envoi fichier KO (POST)\n");
+		return ("Incorrect path </br>");
+	}
+	
+	@GET
+	@Path("/deletefile/{var: .*}")
+	@Produces("text/html")
+	public String deleteFile(@PathParam("var") String file)
+			throws java.io.IOException {
+		final FTPClient ftpClient = new FTPClient();
+		try {
+			ftpClient.connect("edel-brau.lifl.fr", 21);
+			final boolean login = ftpClient.login("anonymous", "bob");
+
+			if (login) {
+				if(ftpClient.deleteFile("upload/"+file)){
+					ftpClient.logout();
+					return ("File "+file+" deleted </br>");
+				}else{
+					return ("Incorrect path </br>");
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return ("Incorrect path </br>");
 	}
 }
