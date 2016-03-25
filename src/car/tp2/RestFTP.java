@@ -20,6 +20,12 @@ import org.apache.commons.net.ftp.FTPFile;
 @Path("/restftp")
 public class RestFTP {
 
+	String restURL = "http://localhost:8080/rest/tp2/restftp";
+	//String ftpAddr = "192.168.0.10";
+		//int ftpPort = 12345;
+	String ftpAddr = "edel-braut.lifl.fr";
+	int ftpPort = 21;
+		
 	String userName = "";
 	String passWord = "";
 	
@@ -32,7 +38,7 @@ public class RestFTP {
 		StreamingOutput so = null;
 		final FTPClient ftpClient = new FTPClient();
 		try {
-			ftpClient.connect("edel-brau.lifl.fr", 21);
+			ftpClient.connect(ftpAddr, ftpPort);
 			final boolean login = ftpClient.login(userName, passWord);
 
 			if (login) {
@@ -72,7 +78,7 @@ public class RestFTP {
 			throws java.io.IOException {
 		final FTPClient ftpClient = new FTPClient();
 		try {
-			ftpClient.connect("edel-brau.lifl.fr", 21);
+			ftpClient.connect(ftpAddr, ftpPort);
 			final boolean login = ftpClient.login(userName, passWord);
 
 			if (login) {
@@ -95,29 +101,40 @@ public class RestFTP {
 			throws java.io.IOException {
 		final FTPClient ftpClient = new FTPClient();
 		try {
-			ftpClient.connect("edel-brau.lifl.fr", 21);
+			ftpClient.connect(ftpAddr, ftpPort);
 			final boolean login = ftpClient.login(userName, passWord);
 
 			if (login) {
 				if (file.equals("home")) {
 					FTPFile files[] = ftpClient.listFiles();
-					String nameFiles = "";
+					String nameFiles = "<h2>Home</h2>\n<ul>";
 					for (FTPFile f : files) {
-						nameFiles += f.getName() + "</br>";
+						if(f.isDirectory())
+							nameFiles += "<li><a href=\"" + restURL + "/listfiles/" + f.getName() + "\">" + f.getName() + "</a></li>";
+						else if(f.isFile())
+							nameFiles += "<li><a href=\"" + restURL + "/getfile/" + f.getName() + "\">" + f.getName() + "</a></li>";
 					}
 					ftpClient.logout();
+					nameFiles += "</ul>";
 					return nameFiles;
 				} else if (ftpClient.changeWorkingDirectory(file)) {
 					FTPFile files[] = ftpClient.listFiles();
-					String nameFiles = "";
+					String nameFiles = "<h2>" + file + "</h2>\n<ul>";
 					for (FTPFile f : files) {
-						nameFiles += f.getName() + "</br>";
+						if(f.isDirectory())
+							nameFiles += "<li><a href=\"" + restURL + "/listfiles/" + file + "/" + f.getName() + "\">" + f.getName() + "</a></li>";
+						else if(f.isFile())
+							nameFiles += "<li><a href=\"" + restURL + "/getfile/" + file + "/" + f.getName() + "\">" + f.getName() + "</a></li>";
+
 					}
 					ftpClient.logout();
+					nameFiles = "</ul>";
 					return nameFiles;
 				} else {
-					return ("Incorrect path </br>");
+					return ("<h2>Incorrect path<h2>");
 				}
+			} else {
+				return "You are not logged in";
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -132,7 +149,7 @@ public class RestFTP {
 			throws java.io.IOException {
 		final FTPClient ftpClient = new FTPClient();
 		try {
-			ftpClient.connect("edel-brau.lifl.fr", 21);
+			ftpClient.connect(ftpAddr, ftpPort);
 			final boolean login = ftpClient.login(userName, passWord);
 
 			if (login) {
@@ -155,9 +172,9 @@ public class RestFTP {
 	public String loginForm() {
 		return " <form method=\"post\">"
 				+ "name:<br>"
-				+ "<input type=\"text\" name=\"name\" value=\"Mickey\"><br>"
+				+ "<input type=\"text\" name=\"name\" value=\"anonymous\"><br>"
 				+ "Password:<br>"
-				+ "<input type=\"text\" name=\"pass\" value=\"Mouse\"><br><br>"
+				+ "<input type=\"password\" name=\"pass\" value=\"bob\"><br><br>"
 				+ "<input type=\"submit\" value=\"Submit\">" + "</form> ";
 	}
 
