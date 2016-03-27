@@ -3,6 +3,7 @@ package car.tp2;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URISyntaxException;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
@@ -11,7 +12,6 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 
 import org.apache.commons.net.ftp.FTPClient;
@@ -21,156 +21,142 @@ import org.apache.commons.net.ftp.FTPFile;
 public class RestFTP {
 
 	String restURL = "http://localhost:8080/rest/tp2/restftp";
-	//String ftpAddr = "192.168.0.10";
-		//int ftpPort = 12345;
-	String ftpAddr = "edel-braut.lifl.fr";
-	int ftpPort = 21;
-		
+	String ftpAddr = "192.168.1.75";
+	int ftpPort = 12345;
+	// String ftpAddr = "edel-braut.lifl.fr";
+	// int ftpPort = 21;
+
 	String userName = "";
 	String passWord = "";
-	
-	// Pour tester:
-	// curl http://localhost:8080/rest/api/helloworld/getfile
+	private boolean authentified;
+	private FTPClient ftpClient;
+
+	public RestFTP() {
+		ftpClient = new FTPClient();
+		authentified = false;
+	}
+
 	@GET
-	@Path("/getfile/{var: .*}")
+	@Path("/get/{file: .*}")
 	@Produces("application/octet-stream")
-	public StreamingOutput getFile(@PathParam("var") String file) {
+	public StreamingOutput getFile(@PathParam("file") String file)
+			throws IOException {
 		StreamingOutput so = null;
-		final FTPClient ftpClient = new FTPClient();
-		try {
-			ftpClient.connect(ftpAddr, ftpPort);
-			final boolean login = ftpClient.login(userName, passWord);
 
-			if (login) {
-				final InputStream is = ftpClient.retrieveFileStream(file);
+		//TODO ne fonctionne pas toujours, à revoir
+		final InputStream is = ftpClient.retrieveFileStream(file);
 
-				if (is != null) {
-					so = new StreamingOutput() {
-						public void write(OutputStream os)
-								throws java.io.IOException {
-							while (is.available() > 0)
-								os.write(is.read());
-							is.close();
-							ftpClient.logout();
-							os.close();
+		if (is != null) {
+			so = new StreamingOutput() {
+				public void write(OutputStream os) throws java.io.IOException {
+					while (is.available() > 0)
+						os.write(is.read());
+					is.close();
+					os.close();
 
-						}
-					};
 				}
-			} else {
-				System.out.println("erreur to be implemented");
-			}
-
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			};
 		}
+
 		return so;
 	}
 
-	// Pour tester:
-	// curl -H "Content-Type: application/octet-stream" -X POST -d "tralala"
-	// http://localhost:8080/rest/api/helloworld/postfile
 	@POST
-	@Path("/postfile/{var: .*}")
+	@Path("/post/{var: .*}")
 	@Consumes("application/octet-stream")
 	public String postFile(InputStream is, @PathParam("var") String file)
 			throws java.io.IOException {
-		final FTPClient ftpClient = new FTPClient();
-		try {
-			ftpClient.connect(ftpAddr, ftpPort);
-			final boolean login = ftpClient.login(userName, passWord);
 
-			if (login) {
-				if (ftpClient.storeFile(file, is))
-					return ("Envoi fichier OK (POST)\n");
+		//TODO à tester après avoir fait le formulaire upload
+		if (!authentified)
+			return loginForm();
 
-				ftpClient.logout();
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return ("Envoi fichier KO (POST)\n");
+		if (ftpClient.storeFile(file, is))
+			return ("Envoi fichier OK (POST), return to <a href='" + restURL + "/list/" + getParent(file) + "'>the file list</a></h2>");
+
+		return ("Envoi fichier KO (POST), return to <a href='" + restURL + "/list/" + getParent(file) + "'>the file list</a></h2>");
 	}
 
 	@GET
-	@Path("/listfiles/{var: .*}")
-	@Produces("text/html")
-	public String listFile(@PathParam("var") String file)
-			throws java.io.IOException {
-		final FTPClient ftpClient = new FTPClient();
-		try {
-			ftpClient.connect(ftpAddr, ftpPort);
-			final boolean login = ftpClient.login(userName, passWord);
-
-			if (login) {
-				if (file.equals("home")) {
-					FTPFile files[] = ftpClient.listFiles();
-					String nameFiles = "<h2>Home</h2>\n<ul>";
-					for (FTPFile f : files) {
-						if(f.isDirectory())
-							nameFiles += "<li><a href=\"" + restURL + "/listfiles/" + f.getName() + "\">" + f.getName() + "</a></li>";
-						else if(f.isFile())
-							nameFiles += "<li><a href=\"" + restURL + "/getfile/" + f.getName() + "\">" + f.getName() + "</a></li>";
-					}
-					ftpClient.logout();
-					nameFiles += "</ul>";
-					return nameFiles;
-				} else if (ftpClient.changeWorkingDirectory(file)) {
-					FTPFile files[] = ftpClient.listFiles();
-					String nameFiles = "<h2>" + file + "</h2>\n<ul>";
-					for (FTPFile f : files) {
-						if(f.isDirectory())
-							nameFiles += "<li><a href=\"" + restURL + "/listfiles/" + file + "/" + f.getName() + "\">" + f.getName() + "</a></li>";
-						else if(f.isFile())
-							nameFiles += "<li><a href=\"" + restURL + "/getfile/" + file + "/" + f.getName() + "\">" + f.getName() + "</a></li>";
-
-					}
-					ftpClient.logout();
-					nameFiles = "</ul>";
-					return nameFiles;
-				} else {
-					return ("<h2>Incorrect path<h2>");
-				}
-			} else {
-				return "You are not logged in";
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return ("Incorrect path </br>");
-	}
-
-	@GET
-	@Path("/deletefile/{var: .*}")
+	@Path("/delete/{var: .*}")
 	@Produces("text/html")
 	public String deleteFile(@PathParam("var") String file)
 			throws java.io.IOException {
-		final FTPClient ftpClient = new FTPClient();
-		try {
-			ftpClient.connect(ftpAddr, ftpPort);
-			final boolean login = ftpClient.login(userName, passWord);
 
-			if (login) {
-				if (ftpClient.deleteFile("upload/" + file)) {
-					ftpClient.logout();
-					return ("File " + file + " deleted </br>");
-				} else {
-					return ("Incorrect path </br>");
-				}
-			} 
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return ("Incorrect path </br>");
+		//TODO semble fonctionner, à tester un peu plus
+		if (!authentified)
+			return loginForm();
+
+		if (ftpClient.deleteFile(file))
+			return ("<h2>File " + file + " deleted, return to <a href='"
+					+ restURL + "/list/" + getParent(file) + "'>the file list</a></h2>");
+		else
+			return ("<h2>Can't delete file " + file + ", return to <a href='"
+					+ restURL + "/list/" + getParent(file) + "'>the file list</a></h2>");
+
 	}
 
 
 	@GET
+	@Path("/upload/{path: .*")
+	@Produces("text/html")
+	public String uploadForm(@PathParam("path") String path) {
+		if (!authentified)
+			return loginForm();
+
+		//TODO récupérer un fichier avec un formulaire html, puis l'envoyer en POST à 'restURL/post/path/nomFichier'
+		
+		return null;
+	}
+	
+	@GET
+	@Path("/list/{path: .*}")
+	@Produces("text/html")
+	public String list(@PathParam("path") String path) throws IOException {
+		if (!authentified)
+			return loginForm();
+
+		//TODO semble fonctionner aussi
+		FTPFile files[] = ftpClient.listFiles(path);
+		
+		String nameFiles = "<h3><a href='" + restURL + "/deconnection'>Deconnection</a></h3>\n";
+		nameFiles += "<h2>" + path + "</h2>\n";
+
+		nameFiles += "<ul>\n";
+
+		if (!path.isEmpty()) {
+
+			nameFiles += "<li><a href='" + restURL + "/list/" + getParent(path)
+					+ "'>[parent folder]</a></li>\n";
+		}
+
+		nameFiles += "<li><a href='" + restURL + "/upload/" + path + "'>[Upload a file]</a></li>\n"; 
+		
+		for (FTPFile f : files) {
+			nameFiles += "<li><a href=\"" + restURL;
+
+			if (f.isDirectory())
+				nameFiles += "/list/";
+			else if (f.isFile())
+				nameFiles += "/get/";
+
+			nameFiles += path + "/" + f.getName() + "\">" + f.getName();
+
+			// add delete link
+			nameFiles += "</a> -- <a href='" + restURL + "/delete/" + path
+					+ "/" + f.getName() + "'>Delete</a></li>\n";
+		}
+		nameFiles += "</ul>\n";
+		return nameFiles;
+	}
+
+	@GET
+	@Path("/login")
 	@Produces("text/html")
 	public String loginForm() {
-		return " <form method=\"post\">"
+		return " <form method=\"post\" action='"
+				+ restURL
+				+ "/connection'>"
 				+ "name:<br>"
 				+ "<input type=\"text\" name=\"name\" value=\"anonymous\"><br>"
 				+ "Password:<br>"
@@ -179,10 +165,49 @@ public class RestFTP {
 	}
 
 	@POST
+	@Path("/connection")
 	@Consumes("application/x-www-form-urlencoded")
-	public Response post(@FormParam("name") String name, @FormParam("pass") String pass) {
+	public String post(@FormParam("name") String name,
+			@FormParam("pass") String pass) throws URISyntaxException,
+			IOException {
 		userName = name;
-		passWord = pass;
-		return Response.ok("connect ok").build();
+
+		if(ftpClient.isConnected()) {
+			ftpClient.disconnect();
+		}
+		
+		ftpClient.connect(ftpAddr, ftpPort);
+		authentified = ftpClient.login(name, pass);
+
+		if (authentified)
+			return "<h2>authentification ok, go to <a href='" + restURL
+					+ "/list/'>the file list</a></h2>";
+
+		userName = null;
+		ftpClient.disconnect();
+		return "<h2>Error authentification</h2>";
+	}
+	
+	@GET
+	@Path("/deconnection")
+	@Produces("text/html")
+	public String deconnection() throws IOException {
+		ftpClient.logout();
+		ftpClient.disconnect();
+		authentified = false;
+		userName = null;
+		return "<h3>You are now disconnected, please go the <a href='" + restURL + "/login'>login page</a></h3>";
+	}
+	
+	
+	private String getParent(String path) {
+		String[] splitString = path.split("/");
+		String parent = "";
+		for (int i = 0; i < splitString.length - 1; i++) {
+			String s = splitString[i];
+			if (s != "")
+				parent += s + "/";
+		}
+		return parent;
 	}
 }
