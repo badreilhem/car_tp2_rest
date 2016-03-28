@@ -18,15 +18,16 @@ import javax.ws.rs.core.StreamingOutput;
 
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
+import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 
 @Path("/restftp")
 public class RestFTP {
 
 	String restURL = "http://localhost:2323/rest/tp2/restftp";
-	String ftpAddr = "192.168.1.25";
-	int ftpPort = 2221;
-	//String ftpAddr = "edel-braut.lifl.fr";
-	//int ftpPort = 21;
+	String ftpAddr = "192.168.0.10";
+	int ftpPort = 12345;
+	// String ftpAddr = "edel-braut.lifl.fr";
+	// int ftpPort = 21;
 
 	String targetDir = "";
 	String userName = "";
@@ -38,8 +39,10 @@ public class RestFTP {
 		ftpClient = new FTPClient();
 		authentified = false;
 	}
+
 	/**
 	 * loginForm
+	 * 
 	 * @return
 	 */
 	@GET
@@ -67,10 +70,10 @@ public class RestFTP {
 			IOException {
 		userName = name;
 
-		if(ftpClient.isConnected()) {
+		if (ftpClient.isConnected()) {
 			ftpClient.disconnect();
 		}
-		
+
 		ftpClient.connect(ftpAddr, ftpPort);
 		authentified = ftpClient.login(name, pass);
 
@@ -82,9 +85,10 @@ public class RestFTP {
 		ftpClient.disconnect();
 		return "<h2>Error authentification</h2>";
 	}
-	
+
 	/**
 	 * deconnection
+	 * 
 	 * @return
 	 * @throws IOException
 	 */
@@ -96,11 +100,13 @@ public class RestFTP {
 		ftpClient.disconnect();
 		authentified = false;
 		userName = null;
-		return "<h3>You are now disconnected, please go the <a href='" + restURL + "/login'>login page</a></h3>";
+		return "<h3>You are now disconnected, please go the <a href='"
+				+ restURL + "/login'>login page</a></h3>";
 	}
 
 	/**
 	 * list
+	 * 
 	 * @param path
 	 * @return
 	 * @throws IOException
@@ -113,8 +119,9 @@ public class RestFTP {
 			return loginForm();
 
 		FTPFile files[] = ftpClient.listFiles(path);
-		
-		String nameFiles = "<h3><a href='" + restURL + "/deconnection'>Deconnection</a></h3>\n";
+
+		String nameFiles = "<h3><a href='" + restURL
+				+ "/deconnection'>Deconnection</a></h3>\n";
 		nameFiles += "<h2>" + path + "</h2>\n";
 
 		nameFiles += "<ul>\n";
@@ -125,8 +132,9 @@ public class RestFTP {
 					+ "'>[parent folder]</a></li>\n";
 		}
 
-		nameFiles += "<li><a href='" + restURL + "/upload/" + path + "'>[Upload a file]</a></li>\n"; 
-		
+		nameFiles += "<li><a href='" + restURL + "/upload/" + path
+				+ "'>[Upload a file]</a></li>\n";
+
 		for (FTPFile f : files) {
 			nameFiles += "<li><a href=\"" + restURL;
 
@@ -143,9 +151,10 @@ public class RestFTP {
 		nameFiles += "</ul>\n";
 		return nameFiles;
 	}
-	
+
 	/**
 	 * delete
+	 * 
 	 * @param file
 	 * @return
 	 * @throws java.io.IOException
@@ -170,6 +179,7 @@ public class RestFTP {
 
 	/**
 	 * get
+	 * 
 	 * @param file
 	 * @return
 	 * @throws IOException
@@ -181,7 +191,7 @@ public class RestFTP {
 			throws IOException {
 		StreamingOutput so = null;
 
-		//TODO ne fonctionne pas toujours, à revoir
+		// TODO ne fonctionne pas toujours, à revoir
 		final InputStream is = ftpClient.retrieveFileStream(file);
 
 		if (is != null) {
@@ -200,28 +210,31 @@ public class RestFTP {
 	}
 
 	@POST
-	@Path("/post/{var: .*}")
+	@Path("/postold/{var: .*}")
 	@Consumes("application/octet-stream")
 	public String postFile(InputStream is, @PathParam("var") String file)
 			throws java.io.IOException {
 
-		//TODO à tester après avoir fait le formulaire upload
+		// TODO à tester après avoir fait le formulaire upload
 		if (!authentified)
 			return loginForm();
 
 		if (ftpClient.storeFile(file, is))
-			return ("Envoi fichier OK (POST), return to <a href='" + restURL + "/list/" + getParent(file) + "'>the file list</a></h2>");
+			return ("Envoi fichier OK (POST), return to <a href='" + restURL
+					+ "/list/" + getParent(file) + "'>the file list</a></h2>");
 
-		return ("Envoi fichier KO (POST), return to <a href='" + restURL + "/list/" + getParent(file) + "'>the file list</a></h2>");
+		return ("Envoi fichier KO (POST), return to <a href='" + restURL
+				+ "/list/" + getParent(file) + "'>the file list</a></h2>");
 	}
 
 	/**
 	 * upload
+	 * 
 	 * @param path
 	 * @return
 	 */
 	@GET
-	@Path("/upload")
+	@Path("/upload/{path : .*}")
 	@Produces("text/html")
 	public String uploadForm(@PathParam("path") String path) {
 		if (!authentified)
@@ -229,49 +242,37 @@ public class RestFTP {
 
 		return " <form method=\"post\" action='"
 				+ restURL
-				+ "/postfile'>"
+				+ "/post' enctype='multipart/form-data'>"
 				+ "file path:<br>"
-				+ "<input type=\"text\" name=\"filepath\" value=\"enter file path\"><br>"
-				+ "<input type=\"submit\" value=\"Submit\">" + "</form> ";
-	}
-	
-	/**
-	 * postFile
-	 * @param filepath
-	 * @return
-	 */
-	@POST
-	@Path("/postfile")
-	@Consumes("application/x-www-form-urlencoded")
-	public String postFile(@FormParam("filepath") String filepath) {
-		if (!authentified)
-			return loginForm();
-		
-		return "<a href='" + restURL + "/post/" + filepath + "'>post " +filepath+" </a>\n";
+				+ "<input type=\"file\" name=\"file\"><br>"
+				+ "<input type=\"text\" name=\"name\" placeholder=\"enter file name\"><br>"
+				+ "<input type=\"hidden\" name=\"path\" value=\"" + path + "/"
+				+ "\">" + "<input type=\"submit\" value=\"Submit\">"
+				+ "</form> ";
 	}
 
 	@SuppressWarnings("resource")
-	@GET
-	@Path("/post/{file: .*}")
+	@POST
+	@Path("/post")
+	@Consumes("multipart/form-data")
 	@Produces("text/html")
-	public String post(@PathParam("file") String file)
+	public String post(@Multipart("file") InputStream file,
+			@Multipart("name") String name, @Multipart("path") String path)
 			throws IOException {
-		
+
 		if (!authentified)
 			return loginForm();
 
-		File f = new File(file);
-		InputStream is = new FileInputStream(f);
-		ftpClient.remoteAppend(file);		
-		if (ftpClient.appendFile(file, is)) {
-			return "<h2>file "+ file+" posted, go to <a href='" + restURL
+		if (ftpClient.storeFile(path + name, file))
+			return "<h2>file " + file + " posted, go to <a href='" + restURL
 					+ "/list/'>the file list</a></h2>";
-		} else {
-			return ("<h2>Une erreur lors de poster le fichier "+file+"</h2>");
-		}
+
+		return ("<h2>Une erreur lors de poster le fichier " + file + "</h2>");
 	}
+
 	/**
 	 * getParent
+	 * 
 	 * @param path
 	 * @return
 	 */
