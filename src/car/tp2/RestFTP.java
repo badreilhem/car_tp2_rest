@@ -168,7 +168,12 @@ public class RestFTP {
 
 	}
 
-	
+	/**
+	 * get
+	 * @param file
+	 * @return
+	 * @throws IOException
+	 */
 	@GET
 	@Path("/get/{file: .*}")
 	@Produces("application/octet-stream")
@@ -257,10 +262,7 @@ public class RestFTP {
 
 		File f = new File(file);
 		InputStream is = new FileInputStream(f);
-		if(!ftpClient.remoteAppend(file)) {
-			return ("<h2>Une erreur lors de poster le fichier "+file+"</h2>");
-		}
-		
+		ftpClient.remoteAppend(file);		
 		if (ftpClient.appendFile(file, is)) {
 			return "<h2>file "+ file+" posted, go to <a href='" + restURL
 					+ "/list/'>the file list</a></h2>";
