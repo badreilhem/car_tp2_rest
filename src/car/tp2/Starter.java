@@ -18,7 +18,7 @@ public class Starter {
 	
 	public static void main( final String[] args ) throws Exception {
 		
-		Server server = new Server( 8080 );
+		Server server = new Server( 2323 );
 		        
  		final ServletHolder servletHolder = new ServletHolder( new CXFServlet() );
  		final ServletContextHandler context = new ServletContextHandler(); 		
